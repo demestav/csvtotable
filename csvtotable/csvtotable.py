@@ -1,6 +1,8 @@
 # -*- coding: utf-8 -*-
 """csvtotext 0.1.0."""
+import argparse
 import csv
+import pathlib
 
 
 def convert_table(csv_dict, compact=False):
@@ -83,3 +85,28 @@ def decorate_entry(entry, width=None, prepend=False):
     if prepend:
         md_entry = f"|{md_entry}"
     return md_entry
+
+
+def cli():
+    """Handle arguments from command line."""
+    # Argument parsing
+    parser = argparse.ArgumentParser()
+    parser.add_argument("csv_file", type=str, help="CSV file to convert.")
+    parser.add_argument(
+        "-c",
+        "--compact-format",
+        action="store_true",
+        help="Remove unnecessary whitespace (more compact output but less readable)",
+    )
+
+    args = parser.parse_args()
+
+    csv_fn = pathlib.Path(args.csv_file)
+    csv_file = open(csv_fn, "r")
+
+    csv_table = convert_table(csv_file, args.compact_format)
+    print(csv_table)  # noqa: T001
+
+
+if __name__ == "__main__":
+    cli()
