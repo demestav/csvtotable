@@ -1,3 +1,4 @@
+from io import StringIO
 from csvtables import __version__
 from csvtables import csvtables
 
@@ -13,3 +14,15 @@ def test_find_max_width():
     assert col_max_width["a"] == 1
     assert col_max_width["b"] == 3
     assert col_max_width["c"] == 5
+
+
+def test_table_output():
+    csv_string = StringIO("a,b,c\n1,123,12345\n")
+    output = csvtables.convert_table(csv_string)
+    assert (
+        output
+        == """| a | b   | c     |
+| - | --- | ----- |
+| 1 | 123 | 12345 |
+"""
+    )

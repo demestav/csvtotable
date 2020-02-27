@@ -1,7 +1,8 @@
 [tool.poetry]
 name = "csvtables"
 version = "0.2.0"
-description = ""
+description = "Converts a CSV formatted input to a readable table in text"
+readme = "README.md"
 authors = ["Demetris Stavrou"]
 license = "MIT"
 
@@ -12,6 +13,7 @@ python = "^3.7"
 pytest = "^3.0"
 flake8 = "^3.7.9"
 black = {version = "^19.10b0", allow-prereleases = true}
+coverage = "^5.0.1"
 
 [tool.poetry.scripts]
 csvtables = "csvtables.csvtables:cli"
