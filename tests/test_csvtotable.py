@@ -32,7 +32,7 @@ def test_table_output():
 def test_class_table_output():
     csv_string = StringIO("a,b,c\n1,123,12345\n")
     csv_table = csvtables.CSVTable(csv_string)
-    output = csv_table.convert()
+    output = csv_table.convert_table()
     assert (
         output
         == """| a | b   | c     |
@@ -80,3 +80,14 @@ def test_class_set_header_names():
     assert headers[0] == "d"
     assert headers[1] == "e"
     assert headers[2] == "f"
+
+
+def test_column_truncate():
+    csv_string = StringIO("abcde,b,c\n1,123,12345\n")
+    csv_table = csvtables.CSVTable(csv_string)
+    for col in csv_table.columns:
+        assert col.truncate is None
+    csv_table.columns[0].truncate = 20
+    assert csv_table.columns[0].truncate == 20
+    csv_table.columns[0].truncate = 2
+    assert csv_table.columns[0].truncate == 7

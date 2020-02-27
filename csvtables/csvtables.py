@@ -8,12 +8,15 @@ import pathlib
 class CSVTable:
     """Manage CSV data."""
 
-    def __init__(self, text_stream):
+    def __init__(
+        self, text_stream, compact=False, separator=",",
+    ):
         self.text_stream = text_stream
         self._csv_reader = csv.DictReader(text_stream)
-
         # Create the columns
         self.columns = [CSVColumn(h) for h in self._csv_reader.fieldnames]
+        self.separator = separator
+        self.compact = compact
 
     @property
     def headers(self):
@@ -29,94 +32,99 @@ class CSVTable:
         for index, header in enumerate(headers):
             self.columns[index].header = header
 
+    def convert_table(self):
+        """Convert csv data to easy to read table (md compatible).
+
+        Returns:
+            CSV table text
+
+        """
+        headers = self._csv_reader.fieldnames
+        csv_data = list(self._csv_reader)
+
+        if not self.compact:
+            col_max = self.find_max_width(headers, csv_data)
+        else:
+            col_max = {k: None for k in headers}
+
+        # Header
+        md_header = ""
+        md_header = self.decorate_entry(
+            headers[0], width=col_max[headers[0]], prepend=True
+        )
+        sep_length = col_max[headers[0]] if not self.compact else len(headers[0])
+        md_separator = self.decorate_entry("-" * sep_length, prepend=True)
+        for h in headers[1:]:
+            md_header += self.decorate_entry(h, width=col_max[h])
+            sep_length = col_max[h] if not self.compact else len(h)
+            md_separator += self.decorate_entry("-" * sep_length, width=None)
+
+        # Data
+        md_data = ""
+        for d in csv_data:
+            first = True
+            for h, value in d.items():
+                md_data += self.decorate_entry(value, width=col_max[h], prepend=first)
+                first = False
+            md_data += "\n"
+
+        md_content = md_header + "\n" + md_separator + "\n" + md_data
+        return md_content
+
+    def find_max_width(self, headers, body):
+        """Find the maximum length of each column, taking into account both the header and the table data.
+
+        Args:
+            headers: List of the column headers
+            body: List of the table data
+
+        Returns:
+            A map between header and maximum width
+        """
+        col_max = {k: len(k) for k in headers}
+        for row in body:
+            for header, value in row.items():
+                if len(value) > col_max[header]:
+                    col_max[header] = len(value)
+        return col_max
+
+    def decorate_entry(self, entry, width=None, prepend=False):
+        """Convert a value into a table cell.
+
+        Args:
+            entry: The value to decorate
+            width: Final size of the table cell in characters
+            prepend: Prepend table border character
+
+        Returns:
+            Decorated table cell
+        """
+        if width:
+            md_entry = f" {entry}{' '*(width-len(entry))} |"
+        else:
+            md_entry = f" {entry} |"
+
+        if prepend:
+            md_entry = f"|{md_entry}"
+        return md_entry
+
 
 class CSVColumn:
     """Manage a CSV column."""
 
     def __init__(self, header):
         self.header = header
+        self._truncate = None
 
+    @property
+    def truncate(self):
+        return self._truncate
 
-def convert_table(csv_dict, compact=False):
-    """Convert csv data to easy to read table (md compatible).
-
-    Args:
-        csv_dict: file-like object that contains CSV data
-        compact: remove all whitespace
-
-    Returns:
-        CSV table text
-
-    """
-    csv_reader = csv.DictReader(csv_dict)
-    headers = csv_reader.fieldnames
-    csv_data = list(csv_reader)
-
-    if not compact:
-        col_max = find_max_width(headers, csv_data)
-    else:
-        col_max = {k: None for k in headers}
-
-    # Header
-    md_header = ""
-    md_header = decorate_entry(headers[0], width=col_max[headers[0]], prepend=True)
-    sep_length = col_max[headers[0]] if not compact else len(headers[0])
-    md_separator = decorate_entry("-" * sep_length, prepend=True)
-    for h in headers[1:]:
-        md_header += decorate_entry(h, width=col_max[h])
-        sep_length = col_max[h] if not compact else len(h)
-        md_separator += decorate_entry("-" * sep_length, width=None)
-
-    # Data
-    md_data = ""
-    for d in csv_data:
-        first = True
-        for h, value in d.items():
-            md_data += decorate_entry(value, width=col_max[h], prepend=first)
-            first = False
-        md_data += "\n"
-
-    md_content = md_header + "\n" + md_separator + "\n" + md_data
-    return md_content
-
-
-def find_max_width(headers, body):
-    """Find the maximum length of each column, taking into account both the header and the table data.
-
-    Args:
-        headers: List of the column headers
-        body: List of the table data
-
-    Returns:
-        A map between header and maximum width
-    """
-    col_max = {k: len(k) for k in headers}
-    for row in body:
-        for header, value in row.items():
-            if len(value) > col_max[header]:
-                col_max[header] = len(value)
-    return col_max
-
-
-def decorate_entry(entry, width=None, prepend=False):
-    """Convert a value into a table cell.
-
-    Args:
-        entry: The value to decorate
-        width: Final size of the table cell in characters
-        prepend: Prepend table border character
-
-    Returns:
-        Decorated table cell
-    """
-    if width:
-        md_entry = f" {entry}{' '*(width-len(entry))} |"
-    else:
-        md_entry = f" {entry} |"
-
-    if prepend:
-        md_entry = f"|{md_entry}"
-    return md_entry
+    @truncate.setter
+    def truncate(self, width=None):
+        if width:
+            width = max(len(self.header) + 2, width)
+        self._truncate = width
 
 
 def cli():
@@ -135,10 +143,10 @@ def cli():
     args = parser.parse_args()
     csv_fn = pathlib.Path(args.csv_file)
     csv_file = open(csv_fn, "r")
-    interactive = args.i
 
-    csv_table = convert_table(csv_file, args.compact_format)
-    print(csv_table)  # noqa: T001
+    csv_table = CSVTable(csv_file)
+    text_table = csv_table.convert_table()
+    print(text_table)  # noqa: T001
 
 
 if __name__ == "__main__":
