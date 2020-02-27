@@ -5,6 +5,38 @@ import csv
 import pathlib
 
 
+class CSVTable:
+    """Manage CSV data."""
+
+    def __init__(self, text_stream):
+        self.text_stream = text_stream
+        self._csv_reader = csv.DictReader(text_stream)
+
+        # Create the columns
+        self.columns = [CSVColumn(h) for h in self._csv_reader.fieldnames]
+
+    @property
+    def headers(self):
+        return [c.header for c in self.columns]
+
+    @headers.setter
+    def headers(self, headers):
+        # Check correct headers number
+        if len(headers) != len(self.columns):
+            raise ValueError(
+                "Number of headers should be the same as number of columns"
+            )
+        for index, header in enumerate(headers):
+            self.columns[index].header = header
+
+
+class CSVColumn:
+    """Manage a CSV column."""
+
+    def __init__(self, header):
+        self.header = header
+
+
 def convert_table(csv_dict, compact=False):
     """Convert csv data to easy to read table (md compatible).
 
@@ -98,11 +130,12 @@ def cli():
         action="store_true",
         help="Remove unnecessary whitespace (more compact output but less readable)",
     )
+    parser.add_argument("-i", action="store_true")
 
     args = parser.parse_args()
-
     csv_fn = pathlib.Path(args.csv_file)
     csv_file = open(csv_fn, "r")
+    interactive = args.i
 
     csv_table = convert_table(csv_file, args.compact_format)
     print(csv_table)  # noqa: T001
