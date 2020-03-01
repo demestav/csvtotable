@@ -9,14 +9,23 @@ class CSVTable:
     """Manage CSV data."""
 
     def __init__(
-        self, text_stream, compact=False, separator=",",
+        self, text_stream, compact=False, delimiter=",",
     ):
         self.text_stream = text_stream
-        self._csv_reader = csv.DictReader(text_stream)
+        self._csv_reader = csv.reader(text_stream, delimiter=delimiter)
         # Create the columns
-        self.columns = [CSVColumn(h) for h in self._csv_reader.fieldnames]
-        self.separator = separator
+        header_line = next(self._csv_reader)
+        self.columns = [CSVColumn(h) for h in header_line]
         self.compact = compact
+
+        # Load data to columns
+        for row in self._csv_reader:
+            for col_obj, row_col_val in zip(self.columns, row):
+                col_obj._data.append(row_col_val)
+
+        # Setup column width
+        for col in self.columns:
+            col.setup_width()
 
     @property
     def headers(self):
@@ -32,44 +41,40 @@ class CSVTable:
         for index, header in enumerate(headers):
             self.columns[index].header = header
 
-    def convert_table(self):
-        """Convert csv data to easy to read table (md compatible).
-
-        Returns:
-            CSV table text
-
-        """
-        headers = self._csv_reader.fieldnames
-        csv_data = list(self._csv_reader)
-
-        if not self.compact:
-            col_max = self.find_max_width(headers, csv_data)
-        else:
-            col_max = {k: None for k in headers}
-
+    def generate_table(self):
+        enabled_columns = list(filter(lambda c: c.enabled, self.columns))
         # Header
-        md_header = ""
-        md_header = self.decorate_entry(
-            headers[0], width=col_max[headers[0]], prepend=True
-        )
-        sep_length = col_max[headers[0]] if not self.compact else len(headers[0])
-        md_separator = self.decorate_entry("-" * sep_length, prepend=True)
-        for h in headers[1:]:
-            md_header += self.decorate_entry(h, width=col_max[h])
-            sep_length = col_max[h] if not self.compact else len(h)
-            md_separator += self.decorate_entry("-" * sep_length, width=None)
+        table_text = ""
+        first = True
+        for col in enabled_columns:
+            table_text += self.decorate_entry(
+                col.header, width=col.width, prepend=first
+            )
+            first = False
+
+        # Seperator
+        table_text += "\n"
+        first = True
+        for col in enabled_columns:
+            table_text += self.decorate_entry(
+                "-" * col.width, width=None, prepend=first
+            )
+            first = False
 
         # Data
-        md_data = ""
-        for d in csv_data:
+        enabled_cols_data = [c._data for c in enabled_columns]
+        first = True
+        for cols in zip(*enabled_cols_data):
             first = True
-            for h, value in d.items():
-                md_data += self.decorate_entry(value, width=col_max[h], prepend=first)
+            table_text += "\n"
+            for index, col in enumerate(cols):
+                table_text += self.decorate_entry(
+                    col, width=enabled_columns[index].width, prepend=first
+                )
                 first = False
-            md_data += "\n"
-
-        md_content = md_header + "\n" + md_separator + "\n" + md_data
-        return md_content
+        return table_text
+        # for row in zip(*enabled_columns):
+        #     for col in row:
 
     def find_max_width(self, headers, body):
         """Find the maximum length of each column, taking into account both the header and the table data.
@@ -115,6 +120,10 @@ class CSVColumn:
     def __init__(self, header):
         self.header = header
         self._truncate = None
+        self._data = []
+        self.width = len(self.header)
+        self.enabled = True
+        self.padding = 1
 
     @property
     def truncate(self):
@@ -125,6 +134,11 @@ class CSVColumn:
         if width:
             width = max(len(self.header) + 2, width)
         self._truncate = width
+
+    def setup_width(self):
+        for d in self._data:
+            if len(d) > self.width:
+                self.width = len(d)
 
 
 def cli():
@@ -138,14 +152,15 @@ def cli():
         action="store_true",
         help="Remove unnecessary whitespace (more compact output but less readable)",
     )
-    parser.add_argument("-i", action="store_true")
+    parser.add_argument("-d", nargs=1)
 
     args = parser.parse_args()
     csv_fn = pathlib.Path(args.csv_file)
     csv_file = open(csv_fn, "r")
 
-    csv_table = CSVTable(csv_file)
-    text_table = csv_table.convert_table()
+    csv_table = CSVTable(csv_file, args.d[0])
+    text_table = csv_table.generate_table()
+    csv_file.close()
     print(text_table)  # noqa: T001
 
 
