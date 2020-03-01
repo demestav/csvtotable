@@ -8,9 +8,7 @@ import pathlib
 class CSVTable:
     """Manage CSV data."""
 
-    def __init__(
-        self, text_stream, compact=False, delimiter=",",
-    ):
+    def __init__(self, text_stream, compact=False, delimiter=",", truncate=[]):
         self.text_stream = text_stream
         self._csv_reader = csv.reader(text_stream, delimiter=delimiter)
         # Create the columns
@@ -26,6 +24,10 @@ class CSVTable:
         # Setup column width
         for col in self.columns:
             col.setup_width()
+
+        # Setup column truncate
+        for col_truncate in truncate:
+            self.columns[col_truncate[0]].truncate = col_truncate[1]
 
     @property
     def headers(self):
@@ -73,25 +75,6 @@ class CSVTable:
                 )
                 first = False
         return table_text
-        # for row in zip(*enabled_columns):
-        #     for col in row:
-
-    def find_max_width(self, headers, body):
-        """Find the maximum length of each column, taking into account both the header and the table data.
-
-        Args:
-            headers: List of the column headers
-            body: List of the table data
-
-        Returns:
-            A map between header and maximum width
-        """
-        col_max = {k: len(k) for k in headers}
-        for row in body:
-            for header, value in row.items():
-                if len(value) > col_max[header]:
-                    col_max[header] = len(value)
-        return col_max
 
     def decorate_entry(self, entry, width=None, prepend=False):
         """Convert a value into a table cell.
@@ -156,14 +139,32 @@ def cli():
         action="store_true",
         help="Remove unnecessary whitespace (more compact output but less readable)",
     )
-    parser.add_argument("-d", nargs=1)
+    parser.add_argument("-d", "--delimiter", nargs=1, help="Define the delimiter")
+    parser.add_argument(
+        "-t",
+        "--truncate",
+        nargs=2,
+        type=int,
+        metavar=("column", "max_length"),
+        action="append",
+    )
 
     args = parser.parse_args()
     csv_fn = pathlib.Path(args.csv_file)
     csv_file = open(csv_fn, "r")
 
-    csv_table = CSVTable(csv_file, delimiter=args.d[0])
-    csv_table.columns[3].truncate = 100
+    if args.delimiter:
+        delimiter = args.delimiter[0]
+    else:
+        delimiter = ","
+
+    if args.truncate:
+        truncate = args.truncate
+    else:
+        truncate = []
+
+    print(truncate)
+    csv_table = CSVTable(csv_file, delimiter=delimiter, truncate=truncate)
     text_table = csv_table.generate_table()
     csv_file.close()
     print(text_table)  # noqa: T001
