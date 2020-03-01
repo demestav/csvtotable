@@ -16,6 +16,17 @@ def test_find_max_width():
     assert csv_table.columns[2].width == 5
 
 
+def test_column_truncate():
+    csv_string = StringIO("a,b,c\n1,123,12345\n")
+    csv_table = csvtables.CSVTable(csv_string)
+    csv_table.columns[1].truncate = 2
+    csv_table.columns[2].truncate = 3
+
+    assert csv_table.columns[0].width == 1
+    assert csv_table.columns[1].width == 2
+    assert csv_table.columns[2].width == 3
+
+
 def test_table_output():
     csv_string = StringIO("a,b,c\n1,123,12345\n")
     csvtable = csvtables.CSVTable(csv_string)

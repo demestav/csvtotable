@@ -105,7 +105,7 @@ class CSVTable:
             Decorated table cell
         """
         if width:
-            md_entry = f" {entry}{' '*(width-len(entry))} |"
+            md_entry = f" {entry[:width]}{' '*(width-len(entry))} |"
         else:
             md_entry = f" {entry} |"
 
@@ -121,13 +121,17 @@ class CSVColumn:
         self.header = header
         self._truncate = None
         self._data = []
-        self.width = len(self.header)
+        self._max_width = 0
         self.enabled = True
         self.padding = 1
 
     @property
     def truncate(self):
         return self._truncate
+
+    @property
+    def width(self):
+        return self._max_width if not self._truncate else self._truncate
 
     @truncate.setter
     def truncate(self, width=None):
@@ -136,9 +140,9 @@ class CSVColumn:
         self._truncate = width
 
     def setup_width(self):
-        for d in self._data:
-            if len(d) > self.width:
-                self.width = len(d)
+        header_max_width = len(self.header)
+        data_max_width = len(max(self._data, key=len))
+        self._max_width = max(header_max_width, data_max_width)
 
 
 def cli():
@@ -158,7 +162,8 @@ def cli():
     csv_fn = pathlib.Path(args.csv_file)
     csv_file = open(csv_fn, "r")
 
-    csv_table = CSVTable(csv_file, args.d[0])
+    csv_table = CSVTable(csv_file, delimiter=args.d[0])
+    csv_table.columns[3].truncate = 100
     text_table = csv_table.generate_table()
     csv_file.close()
     print(text_table)  # noqa: T001
