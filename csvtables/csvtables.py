@@ -96,6 +96,24 @@ class CSVTable:
             md_entry = f"|{md_entry}"
         return md_entry
 
+    def calculate_size(self):
+        """Calculate the size of the resulting table in characters.
+
+        For each column add the width + 2 for padding + 1 for the horizontal seperator.
+        The total width is the columns width + 1 for the newline +1 for the final seperator.
+        The total height is the number of data rows + 1 for seperator + 1 for header.
+        The size in characters is the product of width and height.
+
+        Returns:
+            size in characters
+        """
+        enabled_columns = list(filter(lambda c: c.enabled, self.columns))
+        enabled_columns_width_list = [c.width + 3 for c in enabled_columns]
+        total_width = sum(enabled_columns_width_list) + 2  # Include new line
+        table_height = len(enabled_columns[0]._data) + 2  # Include header and separator
+        size_in_characters = total_width * table_height
+        return size_in_characters
+
 
 class CSVColumn:
     """Manage a CSV column."""
@@ -163,7 +181,6 @@ def cli():
     else:
         truncate = []
 
-    print(truncate)
     csv_table = CSVTable(csv_file, delimiter=delimiter, truncate=truncate)
     text_table = csv_table.generate_table()
     csv_file.close()
