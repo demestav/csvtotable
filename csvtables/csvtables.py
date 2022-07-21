@@ -111,7 +111,8 @@ class CSVTable:
         entry = entry + "|"
 
         if prepend:
-            entry = f"|{entry}"
+            entry = "|" + entry
+
         return entry
 
     def calculate_size(self) -> int:
@@ -140,14 +141,14 @@ class CSVColumn:
 
     def __init__(self, header: str):
         self.header = header
-        self._truncate = None
+        self._truncate: int | None = None
         self._data: list[str] = []
         self._max_width = 0
         self.enabled = True
         self.padding = 1
 
     @property
-    def truncate(self) -> int:
+    def truncate(self) -> int | None:
         return self._truncate
 
     @truncate.setter
