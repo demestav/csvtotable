@@ -1,11 +1,6 @@
 import pytest
 from io import StringIO
-from csvtables import __version__
 from csvtables import csvtables
-
-
-def test_version():
-    assert __version__ == "0.2.0"
 
 
 def test_find_max_width():

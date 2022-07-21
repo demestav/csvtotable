@@ -1,14 +1,19 @@
-# -*- coding: utf-8 -*-
-"""csvtotext 0.1.0."""
 import argparse
 import csv
 import pathlib
+from typing import Iterable, Union
 
 
 class CSVTable:
     """Manage CSV data."""
 
-    def __init__(self, text_stream, compact=False, delimiter=",", truncate=[]):
+    def __init__(
+        self,
+        text_stream: Iterable[str],
+        compact: bool = False,
+        delimiter: str = ",",
+        truncate: list[tuple[int, int]] = [],
+    ):
         self.text_stream = text_stream
         self._csv_reader = csv.reader(text_stream, delimiter=delimiter)
         # Create the columns
@@ -30,11 +35,11 @@ class CSVTable:
             self.columns[col_truncate[0]].truncate = col_truncate[1]
 
     @property
-    def headers(self):
+    def headers(self) -> list[str]:
         return [c.header for c in self.columns]
 
     @headers.setter
-    def headers(self, headers):
+    def headers(self, headers: list[str]) -> None:
         # Check correct headers number
         if len(headers) != len(self.columns):
             raise ValueError(
@@ -43,8 +48,10 @@ class CSVTable:
         for index, header in enumerate(headers):
             self.columns[index].header = header
 
-    def generate_table(self):
-        enabled_columns = list(filter(lambda c: c.enabled, self.columns))
+    def generate_table(self) -> str:
+        enabled_columns: list[CSVColumn] = list(
+            filter(lambda c: c.enabled, self.columns)
+        )
         # Header
         table_text = ""
         first = True
@@ -59,24 +66,31 @@ class CSVTable:
         first = True
         for col in enabled_columns:
             table_text += self.decorate_entry(
-                "-" * col.width, width=None, prepend=first
+                "-" * (col.width + 2), width=None, prepend=first, padding=False
             )
             first = False
 
         # Data
         enabled_cols_data = [c._data for c in enabled_columns]
         first = True
+
         for cols in zip(*enabled_cols_data):
             first = True
             table_text += "\n"
-            for index, col in enumerate(cols):
+            for index, col_data in enumerate(cols):
                 table_text += self.decorate_entry(
-                    col, width=enabled_columns[index].width, prepend=first
+                    col_data, width=enabled_columns[index].width, prepend=first
                 )
                 first = False
         return table_text
 
-    def decorate_entry(self, entry, width=None, prepend=False):
+    def decorate_entry(
+        self,
+        entry: str,
+        width: Union[int, None] = None,
+        prepend: int = False,
+        padding: bool = True,
+    ) -> str:
         """Convert a value into a table cell.
 
         Args:
@@ -87,16 +101,20 @@ class CSVTable:
         Returns:
             Decorated table cell
         """
+
         if width:
-            md_entry = f" {entry[:width]}{' '*(width-len(entry))} |"
-        else:
-            md_entry = f" {entry} |"
+            entry = f"{entry[:width]}{' '*(width-len(entry))}"
+
+        if padding:
+            entry = entry.center(len(entry) + 2)
+
+        entry = entry + "|"
 
         if prepend:
-            md_entry = f"|{md_entry}"
-        return md_entry
+            entry = f"|{entry}"
+        return entry
 
-    def calculate_size(self):
+    def calculate_size(self) -> int:
         """Calculate the size of the resulting table in characters.
 
         For each column add the width + 2 for padding + 1 for the horizontal seperator.
@@ -107,7 +125,9 @@ class CSVTable:
         Returns:
             size in characters
         """
-        enabled_columns = list(filter(lambda c: c.enabled, self.columns))
+        enabled_columns: list[CSVColumn] = list(
+            filter(lambda c: c.enabled, self.columns)
+        )
         enabled_columns_width_list = [c.width + 3 for c in enabled_columns]
         total_width = sum(enabled_columns_width_list) + 2  # Include new line
         table_height = len(enabled_columns[0]._data) + 2  # Include header and separator
@@ -118,35 +138,35 @@ class CSVTable:
 class CSVColumn:
     """Manage a CSV column."""
 
-    def __init__(self, header):
+    def __init__(self, header: str):
         self.header = header
         self._truncate = None
-        self._data = []
+        self._data: list[str] = []
         self._max_width = 0
         self.enabled = True
         self.padding = 1
 
     @property
-    def truncate(self):
+    def truncate(self) -> int:
         return self._truncate
 
-    @property
-    def width(self):
-        return self._max_width if not self._truncate else self._truncate
-
     @truncate.setter
-    def truncate(self, width=None):
+    def truncate(self, width: Union[int, None] = None) -> None:
         if width:
             width = max(len(self.header) + 2, width)
         self._truncate = width
 
-    def setup_width(self):
+    @property
+    def width(self) -> int:
+        return self._max_width if not self._truncate else self._truncate
+
+    def setup_width(self) -> None:
         header_max_width = len(self.header)
         data_max_width = len(max(self._data, key=len))
         self._max_width = max(header_max_width, data_max_width)
 
 
-def cli():
+def cli() -> None:
     """Handle arguments from command line."""
     # Argument parsing
     parser = argparse.ArgumentParser()
