@@ -1,7 +1,9 @@
+from __future__ import annotations
+
 import argparse
 import csv
 import pathlib
-from typing import Iterable, Union
+from typing import Iterable
 
 
 class CSVTable:
@@ -12,7 +14,7 @@ class CSVTable:
         text_stream: Iterable[str],
         compact: bool = False,
         delimiter: str = ",",
-        truncate: list[tuple[int, int]] = [],
+        truncate: list[tuple[int, int]] | None = None,
     ):
         self.text_stream = text_stream
         self._csv_reader = csv.reader(text_stream, delimiter=delimiter)
@@ -31,8 +33,9 @@ class CSVTable:
             col.setup_width()
 
         # Setup column truncate
-        for col_truncate in truncate:
-            self.columns[col_truncate[0]].truncate = col_truncate[1]
+        if truncate:
+            for col_truncate in truncate:
+                self.columns[col_truncate[0]].truncate = col_truncate[1]
 
     @property
     def headers(self) -> list[str]:
@@ -87,7 +90,7 @@ class CSVTable:
     def decorate_entry(
         self,
         entry: str,
-        width: Union[int, None] = None,
+        width: int | None = None,
         prepend: int = False,
         padding: bool = True,
     ) -> str:
@@ -119,9 +122,9 @@ class CSVTable:
         """Calculate the size of the resulting table in characters.
 
         For each column add the width + 2 for padding + 1 for the horizontal seperator.
-        The total width is the columns width + 1 for the newline +1 for the final seperator.
-        The total height is the number of data rows + 1 for seperator + 1 for header.
-        The size in characters is the product of width and height.
+        The total width is the columns width + 1 for the newline +1 for the final
+        seperator. The total height is the number of data rows + 1 for seperator + 1
+        for header. The size in characters is the product of width and height.
 
         Returns:
             size in characters
@@ -152,7 +155,7 @@ class CSVColumn:
         return self._truncate
 
     @truncate.setter
-    def truncate(self, width: Union[int, None] = None) -> None:
+    def truncate(self, width: int | None = None) -> None:
         if width:
             width = max(len(self.header) + 2, width)
         self._truncate = width
@@ -190,7 +193,7 @@ def cli() -> None:
 
     args = parser.parse_args()
     csv_fn = pathlib.Path(args.csv_file)
-    csv_file = open(csv_fn, "r")
+    csv_file = open(csv_fn)
 
     if args.delimiter:
         delimiter = args.delimiter[0]

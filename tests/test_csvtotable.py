@@ -1,5 +1,7 @@
-import pytest
 from io import StringIO
+
+import pytest
+
 from csvtables import csvtables
 
 
@@ -92,7 +94,7 @@ def test_class_set_header_names():
     assert headers[2] == "f"
 
 
-def test_column_truncate():
+def test_column_truncate_alt():
     csv_string = StringIO("abcde,b,c\n1,123,12345\n")
     csv_table = csvtables.CSVTable(csv_string)
     for col in csv_table.columns:
@@ -106,4 +108,4 @@ def test_column_truncate():
 def test_column_data():
     csv_string = StringIO("a,b,c\n1,123,12345\n678,901,234\n")
     csv_table = csvtables.CSVTable(csv_string)
-    csv_table.columns[0]._data == ["1", "678"]
+    assert csv_table.columns[0]._data == ["1", "678"]
