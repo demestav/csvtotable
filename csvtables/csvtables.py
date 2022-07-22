@@ -12,7 +12,6 @@ class CSVTable:
     def __init__(
         self,
         text_stream: Iterable[str],
-        compact: bool = False,
         delimiter: str = ",",
         truncate: list[tuple[int, int]] | None = None,
     ):
@@ -21,7 +20,6 @@ class CSVTable:
         # Create the columns
         header_line = next(self._csv_reader)
         self.columns = [CSVColumn(h) for h in header_line]
-        self.compact = compact
 
         # Load data to columns
         for row in self._csv_reader:
@@ -175,12 +173,6 @@ def cli() -> None:
     # Argument parsing
     parser = argparse.ArgumentParser()
     parser.add_argument("csv_file", type=str, help="CSV file to convert.")
-    parser.add_argument(
-        "-c",
-        "--compact-format",
-        action="store_true",
-        help="Remove unnecessary whitespace (more compact output but less readable)",
-    )
     parser.add_argument("-d", "--delimiter", nargs=1, help="Define the delimiter")
     parser.add_argument(
         "-t",
