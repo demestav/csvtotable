@@ -13,15 +13,18 @@ def test_find_max_width():
     assert csv_table.columns[2].width == 5
 
 
-def test_column_truncate():
+def test_column_truncate_table():
     csv_string = StringIO("a,b,c\n1,123,12345\n")
     csv_table = csvtables.CSVTable(csv_string)
     csv_table.columns[1].truncate = 2
     csv_table.columns[2].truncate = 3
 
-    assert csv_table.columns[0].width == 1
-    assert csv_table.columns[1].width == 2
-    assert csv_table.columns[2].width == 3
+    assert (
+        csv_table.generate_table()
+        == """| a | b  | c   |
+|---|----|-----|
+| 1 | 12 | 123 |"""
+    )
 
 
 def test_table_output():
@@ -39,19 +42,6 @@ def test_table_output():
 # | 1 | 123 | 12345 |
 # """
 #     )
-
-
-def test_class_table_output():
-    csv_string = StringIO("a,b,c\n1,123,12345\n")
-    csv_table = csvtables.CSVTable(csv_string)
-    output = csv_table.convert_table()
-    assert (
-        output
-        == """| a | b   | c     |
-| - | --- | ----- |
-| 1 | 123 | 12345 |
-"""
-    )
 
 
 def test_column_headers():
@@ -102,7 +92,7 @@ def test_column_truncate_alt():
     csv_table.columns[0].truncate = 20
     assert csv_table.columns[0].truncate == 20
     csv_table.columns[0].truncate = 2
-    assert csv_table.columns[0].truncate == 7
+    assert csv_table.columns[0].truncate == 5
 
 
 def test_column_data():

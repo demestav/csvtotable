@@ -155,7 +155,7 @@ class CSVColumn:
     @truncate.setter
     def truncate(self, width: int | None = None) -> None:
         if width:
-            width = max(len(self.header) + 2, width)
+            width = max(len(self.header), width)
         self._truncate = width
 
     @property
